@@ -17,6 +17,7 @@ class Maze():
 
         self.ls_count = 0
         self.rs_count = 0
+        self.sampling = False
 
     def sensor_callback(self, msg):
         # クラス変数のメッセージオブジェクトに受信したデータをセット
@@ -35,7 +36,7 @@ class Maze():
         if m == "LEFT": self.motor_cont(-200, 200)
         if m == "RIGHT": self.motor_cont(200, -200)
 
-    def moveFeedback(self, offset, speed, k):
+    def moveFeedback(self, offset, speed, k, mode):
         # left_sideが2000より大きい時は、右回り旋回
         if self.data.left_side > 1500:
             self.turn_move("RIGHT")
@@ -48,33 +49,92 @@ class Maze():
 
         # 壁沿いを追従走行するための計算
         # (基準値 - 現在のleft_side) * ゲイン
-        diff = (offset - self.data.left_side) * k
-        # 計算した値をモータに出力
-        self.motor_cont(speed - diff, speed + diff)
+        if mode == "LEFT":
+            diff = (offset - self.data.left_side) * k
+            # 計算した値をモータに出力
+            self.motor_cont(speed - diff, speed + diff)
+        if mode == "RIGHT":
+            diff = (offset - self.data.right_side) * k
+            # 計算した値をモータに出力
+            self.motor_cont(speed + diff, speed - diff)
 
     def stopMove(self):
         # 終了時にモータを止める
         self.motor_cont(0, 0)
 
-    def motion(self):
-        # 左側に壁があるとき
-        if self.data.left_side > self.data.right_side: self.rs_count += 1
-        else: self.ls_count += 1
+    def checker(self):
+        # 壁無し判定
+        if self.data.left_side < 100:
+            self.rs_count += 1
+        if self.data.right_side < 100:
+            self.ls_count += 1
 
-        # 袋小路の処理
-        if self.ls_count < self.rs_count: self.state_turn = "RIGHT"
-        else: self.state_turn = "LEFT"
-        if self.data.left_forward > 1000 and self.data.right_forward > 1000:
-            while self.data.left_forward > 500 and self.data.right_forward > 500:
-                self.turn_move(self.state_turn)
+    def motion(self):
+        # 左側に壁がある確率が高くて、目の前に壁がなさそうなとき
+        if self.data.left_forward < 300 or self.data.right_forward < 300:
+            print("STRAIGHT")
+            for time in range(12):
+                self.checker()
+                if self.data.left_side > self.data.right_side:
+                    self.moveFeedback(500, 500, 0.2, "LEFT")
+                else:
+                    self.moveFeedback(500, 500, 0.2, "RIGHT")
                 self.rate.sleep()
+            self.stopMove()
+            
+            # 目の前に壁がなくて、右側に壁がない場合
+            if self.data.left_forward < 300 or self.data.right_forward < 300:
+                if self.rs_count > 0:
+                    print("MID_LEFT_TURN", self.rs_count)
+                    for time in range(10):
+                        self.turn_move("LEFT")
+                        self.rate.sleep()
+                    self.stopMove()
+            # 直進した後に、目の前に壁があったとき
+            elif self.data.left_forward > 300 and self.data.right_forward > 300:
+                # 左右の壁がない場合
+                if self.ls_count > 0 and self.rs_count > 0:
+                    print("LEFT_TURN_2", self.ls_count, self.rs_count)
+                    for time in range(10):
+                        self.turn_move("LEFT")
+                        self.rate.sleep()
+                    self.stopMove()
+                # 右の壁がない場合
+                elif self.ls_count > 0:
+                    print("RIGHT_TURN", self.ls_count)
+                    for time in range(10):
+                        self.turn_move("RIGHT")
+                        self.rate.sleep()
+                    self.stopMove()
+                # 左の壁がない場合
+                elif self.rs_count > 0:
+                    print("LEFT_TURN", self.ls_count)
+                    for time in range(10):
+                        self.turn_move("LEFT")
+                        self.rate.sleep()
+                    self.stopMove()          
             self.ls_count = 0
             self.rs_count = 0
             return
-        self.moveFeedback(600, 500, 0.2)
+        
+        # 左右関係なく、目の前に壁があるとき
+        if self.data.left_forward > 1000 and self.data.right_forward > 1000:
+            print("DEAD END")
+            for time in range(20):
+                self.turn_move("LEFT")
+                self.rate.sleep()
+            self.stopMove()
+            self.ls_count = 0
+            self.rs_count = 0
+            return
+        if self.data.left_side > self.data.right_side:
+            self.moveFeedback(500, 500, 0.2, "LEFT")
+        else:
+            self.moveFeedback(500, 500, 0.2, "RIGHT")
+
 
     def run(self):
-        self.rate = rospy.Rate(50)
+        self.rate = rospy.Rate(10)
         self.state_wall = False
         rospy.on_shutdown(self.stopMove)
         while not rospy.is_shutdown():
