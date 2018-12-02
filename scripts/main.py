@@ -65,8 +65,10 @@ class Maze():
     def checker(self):
         # 壁無し判定
         if self.data.left_side < 100:
+            print("--RS_COUNT:", self.data.left_side)
             self.rs_count += 1
-        if self.data.right_side < 100:
+        if self.data.right_side < 150:
+            print("--LS_COUNT:", self.data.right_side)
             self.ls_count += 1
 
     def motion(self):
@@ -118,7 +120,7 @@ class Maze():
             return
         
         # 左右関係なく、目の前に壁があるとき
-        if self.data.left_forward > 1000 and self.data.right_forward > 1000:
+        if self.data.left_forward > 2000 and self.data.right_forward > 2000:
             print("DEAD END")
             for time in range(20):
                 self.turn_move("LEFT")
@@ -137,6 +139,8 @@ class Maze():
         self.rate = rospy.Rate(10)
         self.state_wall = False
         rospy.on_shutdown(self.stopMove)
+        while self.data.left_side == 0 and self.data.right_side == 0:
+            self.rate.sleep()
         while not rospy.is_shutdown():
             self.motion()
             self.rate.sleep()
