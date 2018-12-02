@@ -5,6 +5,7 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Twist
 from raspimouse_ros_2.msg import *
+from std_srvs.srv import Trigger, TriggerResponse, Empty
 
 class Maze():
     def __init__(self):
@@ -15,9 +16,11 @@ class Maze():
         # Raspberry Pi Mouseの光センサのメッセージオブジェクト
         self.data = LightSensorValues()
 
+        # 実行時にシミュレータを初期状態にする
+        self.modeSimReset = True
+
         self.ls_count = 0
         self.rs_count = 0
-        self.sampling = False
 
     def sensor_callback(self, msg):
         # クラス変数のメッセージオブジェクトに受信したデータをセット
@@ -74,7 +77,7 @@ class Maze():
     def motion(self):
         # 左側に壁がある確率が高くて、目の前に壁がなさそうなとき
         if self.data.left_forward < 300 or self.data.right_forward < 300:
-            print("STRAIGHT")
+            print("Move: STRAIGHT")
             for time in range(12):
                 self.checker()
                 if self.data.left_side > self.data.right_side:
@@ -87,7 +90,7 @@ class Maze():
             # 目の前に壁がなくて、右側に壁がない場合
             if self.data.left_forward < 300 or self.data.right_forward < 300:
                 if self.rs_count > 0:
-                    print("MID_LEFT_TURN", self.rs_count)
+                    print("Move: MID LEFT TURN")
                     for time in range(10):
                         self.turn_move("LEFT")
                         self.rate.sleep()
@@ -96,21 +99,21 @@ class Maze():
             elif self.data.left_forward > 300 and self.data.right_forward > 300:
                 # 左右の壁がない場合
                 if self.ls_count > 0 and self.rs_count > 0:
-                    print("LEFT_TURN_2", self.ls_count, self.rs_count)
+                    print("Move: LEFT TURN_2")
                     for time in range(10):
                         self.turn_move("LEFT")
                         self.rate.sleep()
                     self.stopMove()
                 # 右の壁がない場合
                 elif self.ls_count > 0:
-                    print("RIGHT_TURN", self.ls_count)
+                    print("Move: RIGHT TURN")
                     for time in range(10):
                         self.turn_move("RIGHT")
                         self.rate.sleep()
                     self.stopMove()
                 # 左の壁がない場合
                 elif self.rs_count > 0:
-                    print("LEFT_TURN", self.ls_count)
+                    print("Move: LEFT TURN")
                     for time in range(10):
                         self.turn_move("LEFT")
                         self.rate.sleep()
@@ -121,7 +124,7 @@ class Maze():
         
         # 左右関係なく、目の前に壁があるとき
         if self.data.left_forward > 2000 and self.data.right_forward > 2000:
-            print("DEAD END")
+            print("Move: DEAD END")
             for time in range(20):
                 self.turn_move("LEFT")
                 self.rate.sleep()
@@ -134,10 +137,18 @@ class Maze():
         else:
             self.moveFeedback(500, 500, 0.2, "RIGHT")
 
-
+    def init(self):
+        if self.modeSimReset:
+            rospy.wait_for_service('/gazebo/reset_world')
+            try: rospy.ServiceProxy('/gazebo/reset_world', Empty).call()
+            except rospy.ServiceException, e: print "Service call failed: %s"%e
+        rospy.wait_for_service('/motor_on')
+        try: rospy.ServiceProxy('/motor_on', Trigger).call()
+        except rospy.ServiceException, e: print "Service call failed: %s"%e
+        
     def run(self):
         self.rate = rospy.Rate(10)
-        self.state_wall = False
+        self.init()
         rospy.on_shutdown(self.stopMove)
         while self.data.left_side == 0 and self.data.right_side == 0:
             self.rate.sleep()
