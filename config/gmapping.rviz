@@ -68,7 +68,7 @@ Visualization Manager:
       Frames:
         All Enabled: false
         base_footprint:
-          Value: true
+          Value: false
         base_link:
           Value: true
         left_wheel:
@@ -78,13 +78,13 @@ Visualization Manager:
         ls:
           Value: false
         map:
-          Value: true
+          Value: false
         odom:
           Value: true
         rf:
           Value: false
         right_wheel:
-          Value: true
+          Value: false
         rs:
           Value: false
         urg_lrf_link:
