@@ -157,5 +157,5 @@ class LeftHand():
             self.rate.sleep()
 
 if __name__ == '__main__':
-    rospy.init_node('Maze')
+    rospy.init_node('LeftHand')
     LeftHand().run()
