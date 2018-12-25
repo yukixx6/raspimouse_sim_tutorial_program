@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>raspimouse_sim_tutorial_book_sample_program</name>
+  <name>raspimouse_sim_tutorial_program</name>
   <version>0.0.0</version>
-  <description>The raspimouse_sim_tutorial_book_sample_program package</description>
+  <description>The sample program for raspimouse simulator's tutorial </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
