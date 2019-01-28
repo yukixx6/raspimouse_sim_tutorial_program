@@ -23,6 +23,7 @@ if __name__ == '__main__':
     lfile = "/dev/rtmotor_raw_l0"
     rfile = "/dev/rtmotor_raw_r0"
     rate = rospy.Rate(10)
+    print("w: GO, s: BACK, a: LEFT, d: RIGHT >")
     try:
         while not rospy.is_shutdown():
             key = GetKey()
@@ -30,30 +31,26 @@ if __name__ == '__main__':
                 with open(lfile, "w") as lf, open(rfile, "w") as rf:
                     lf.write(str(990)+'\n')
                     rf.write(str(990)+'\n')
-                    print("go")
+                print("GO")
             if(key=="s"):
                 with open(lfile, "w") as lf, open(rfile, "w") as rf:
                     lf.write(str(-990)+'\n')
                     rf.write(str(-990)+'\n')
-                    print("back")
-
+                print("BACK")
             if(key=="a"):
                 with open(lfile, "w") as lf, open(rfile, "w") as rf:
                     lf.write(str(-409)+'\n')
                     rf.write(str(409)+'\n')
-                    print("left")
-
+                print("LEFT")
             if(key=="d"):
                 with open(lfile, "w") as lf, open(rfile, "w") as rf:
                     lf.write(str(409)+'\n')
                     rf.write(str(-409)+'\n')
-                    print("right")
-
+                print("RIGHT")
             if(key==""):
                 with open(lfile, "w") as lf, open(rfile, "w") as rf:
                     lf.write(str(0)+'\n')
                     rf.write(str(0)+'\n')
-                    print("stop")
             else:
                 if (key == '\x03'):
                     break
